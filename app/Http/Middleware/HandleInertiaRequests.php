@@ -2,19 +2,20 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Inertia\Middleware;
 
-class HandleInertiaRequests
+class HandleInertiaRequests extends Middleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  Closure(Request): (Response)  $next
-     */
-    public function handle(Request $request, Closure $next): Response
+    protected $rootView = 'app';
+
+    public function share(Request $request): array
     {
-        return $next($request);
+        return [...parent::share($request),
+            'auth' => ['user' => $request->user()?->only('id', 'name', 'email')],
+            'provider' => config('spendtrace.provider'),
+            'notice' => fn () => $request->session()->get('notice'),
+            'categories' => config('spendtrace.categories'), 'currencies' => config('spendtrace.currencies'),
+        ];
     }
 }

@@ -1,0 +1,7 @@
+export interface Identifier { kind: string; last_four: string; device_label: string | null }
+export interface Account { id: number; institution: string; nickname: string; card_network: string | null; identifiers: Identifier[] }
+export interface Item { id?: number; description: string | null; quantity: string | null; amount: string | null; category: string | null }
+export interface Receipt { id: number; status: string; provider: string; error: string | null; created_at: string; images?: {id: number}[]; runs?: {id: number; generation: number; provider: string; version: string; output: unknown; error: string | null}[] }
+export interface Transaction { id: number; merchant: string | null; purchase_date: string | null; purchase_time: string | null; amount: string | null; currency: string | null; category: string | null; account_id: number | null; account?: Account | null; receipt: Receipt; items: Item[]; revision: number; review_status: string; reconciliation_status: string; review_reasons: string[] | null; corrected_fields: string[] | null; excluded: boolean }
+export function money(t: {amount: string | null; currency: string | null}): string { return t.amount === null ? 'Amount unknown' : `${t.currency ?? 'Unknown currency'} ${t.amount}`; }
+export function dateLabel(value: string | null): string { if (!value) return 'Purchase date unknown'; const [y,m,d] = value.split('-').map(Number); return new Intl.DateTimeFormat('en-US', {month:'short', day:'numeric', year:'numeric', timeZone:'UTC'}).format(new Date(Date.UTC(y,m-1,d))); }

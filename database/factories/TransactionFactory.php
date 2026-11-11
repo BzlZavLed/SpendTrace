@@ -2,23 +2,16 @@
 
 namespace Database\Factories;
 
+use App\Models\Receipt;
 use App\Models\Transaction;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Transaction>
- */
 class TransactionFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = Transaction::class;
+
     public function definition(): array
     {
-        return [
-            //
-        ];
+        return ['receipt_id' => Receipt::factory(), 'user_id' => fn (array $a) => Receipt::findOrFail($a['receipt_id'])->user_id, 'revision' => 0, 'corrected_fields' => [], 'review_reasons' => []];
     }
 }

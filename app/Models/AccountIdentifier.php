@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AccountIdentifier extends Model
 {
-    /** @use HasFactory<\Database\Factories\AccountIdentifierFactory> */
     use HasFactory;
+
+    protected $guarded = ['id'];
 }

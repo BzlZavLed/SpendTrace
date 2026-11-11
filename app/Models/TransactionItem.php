@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class TransactionItem extends Model
 {
-    /** @use HasFactory<\Database\Factories\TransactionItemFactory> */
     use HasFactory;
+
+    protected $guarded = ['id'];
+
+    protected $casts = ['amount_minor' => 'integer', 'quantity' => 'decimal:3'];
 }

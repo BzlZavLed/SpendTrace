@@ -3,22 +3,15 @@
 namespace Database\Factories;
 
 use App\Models\ExtractionRun;
+use App\Models\Receipt;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<ExtractionRun>
- */
 class ExtractionRunFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = ExtractionRun::class;
+
     public function definition(): array
     {
-        return [
-            //
-        ];
+        return ['receipt_id' => Receipt::factory(), 'generation' => 1, 'provider' => 'fake', 'version' => 'receipt-v1'];
     }
 }

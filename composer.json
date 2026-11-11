@@ -1,9 +1,12 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "spendtrace/spendtrace",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Private receipt capture and a trustworthy personal spending ledger.",
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.3",
@@ -44,7 +47,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "@php artisan dev"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"composer serve\" \"php artisan queue:work --tries=1 --timeout=120 --sleep=1\" \"npm run dev\" --names=server,queue,vite --kill-others"
         ],
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
@@ -67,6 +70,10 @@
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+        ],
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php -d upload_max_filesize=10M -d post_max_size=65M -d max_file_uploads=6 -d memory_limit=512M -S 127.0.0.1:8000 -t public server.php"
         ]
     },
     "extra": {

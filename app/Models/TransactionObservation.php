@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class TransactionObservation extends Model
 {
-    /** @use HasFactory<\Database\Factories\TransactionObservationFactory> */
     use HasFactory;
+
+    protected $guarded = ['id'];
+
+    protected $casts = ['payload' => 'array', 'observed_at' => 'immutable_datetime'];
 }

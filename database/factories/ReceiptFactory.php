@@ -3,22 +3,15 @@
 namespace Database\Factories;
 
 use App\Models\Receipt;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Receipt>
- */
 class ReceiptFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = Receipt::class;
+
     public function definition(): array
     {
-        return [
-            //
-        ];
+        return ['user_id' => User::factory(), 'provider' => 'fake', 'status' => 'queued', 'generation' => 1];
     }
 }

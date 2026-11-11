@@ -1,0 +1,1 @@
+<script setup lang="ts">defineProps<{errors: Record<string,string>}>();</script><template><div v-if="Object.keys(errors).length" class="errors" role="alert"><p v-for="(error,key) in errors" :key="key">{{ error }}</p></div></template>

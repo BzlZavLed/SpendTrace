@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class ExtractionRun extends Model
 {
-    /** @use HasFactory<\Database\Factories\ExtractionRunFactory> */
     use HasFactory;
+
+    protected $guarded = ['id'];
+
+    protected $casts = ['output' => 'array'];
 }

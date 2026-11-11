@@ -2,23 +2,16 @@
 
 namespace Database\Factories;
 
+use App\Models\Transaction;
 use App\Models\TransactionObservation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<TransactionObservation>
- */
 class TransactionObservationFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = TransactionObservation::class;
+
     public function definition(): array
     {
-        return [
-            //
-        ];
+        return ['transaction_id' => Transaction::factory(), 'source_type' => 'receipt', 'source_id' => fake()->uuid()];
     }
 }
