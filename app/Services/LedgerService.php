@@ -14,7 +14,7 @@ class LedgerService
             return [];
         }
 
-        return Transaction::where('user_id', $transaction->user_id)->where('id', '!=', $transaction->id)
+        return Transaction::whereNull('merged_into_id')->where('user_id', $transaction->user_id)->where('id', '!=', $transaction->id)
             ->where('purchase_date', $transaction->purchase_date)->where('total_minor', $transaction->total_minor)
             ->where('currency', $transaction->currency)->whereRaw('LOWER(TRIM(merchant)) = ?', [mb_strtolower(trim($transaction->merchant))])
             ->when($transaction->account_id, fn ($q) => $q->where(fn ($q) => $q->whereNull('account_id')->orWhere('account_id', $transaction->account_id)))
@@ -38,7 +38,7 @@ class LedgerService
     public function summary(User $user): array
     {
         $month = now(config('spendtrace.timezone'))->startOfMonth();
-        $base = Transaction::where('user_id', $user->id)->where('excluded', false);
+        $base = Transaction::whereNull('merged_into_id')->where('user_id', $user->id)->where('excluded', false);
         $totals = (clone $base)->whereBetween('purchase_date', [$month->toDateString(), now(config('spendtrace.timezone'))->toDateString()])
             ->whereNotNull('currency')->whereNotNull('total_minor')->selectRaw('currency, SUM(total_minor) as amount')->groupBy('currency')->get()
             ->map(fn ($row) => ['currency' => $row->currency, 'amount' => Money::format((int) $row->amount, $row->currency)]);
@@ -50,7 +50,7 @@ class LedgerService
 
     public function present(Transaction $transaction): array
     {
-        return [...$transaction->toArray(), 'amount' => Money::format($transaction->total_minor, $transaction->currency),
-            'items' => $transaction->items->map(fn ($item) => [...$item->toArray(), 'amount' => Money::format($item->amount_minor, $transaction->currency)])->all()];
+        return [...$transaction->toArray(), 'amount' => $transaction->total_decimal ?? Money::format($transaction->total_minor, $transaction->currency),
+            'items' => $transaction->items->map(fn ($item) => [...$item->toArray(), 'amount' => $item->amount_decimal ?? Money::format($item->amount_minor, $transaction->currency)])->all()];
     }
 }

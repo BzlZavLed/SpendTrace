@@ -1,0 +1,123 @@
+{
+  "kind": "authoring-specification-not-an-installable-shortcut",
+  "name": "SpendTrace \u2014 Capture Purchase",
+  "version": "0.1.0-unreleased",
+  "release_status": "signed-previews-created-mac-core-tested-awaiting-iphone-property-selection-and-live-https-validation",
+  "credentials": null,
+  "endpoint": null,
+  "card_mappings": null,
+  "required_device_evidence": [
+    "Native amount property to text preserves exact value on the target iPhone",
+    "Background configuration access after reboot and while locked",
+    "Successful live HTTPS pairing and test followed by two real card transactions",
+    "Clean installation of the final phone-authored export"
+  ],
+  "entry_paths": {
+    "manual_without_wallet_input": {
+      "menu": [
+        "Pair device",
+        "Test connection",
+        "Replace configuration"
+      ],
+      "never_create_expense": true
+    },
+    "pair_device": {
+      "input": "Paste app-generated setup text with separate pairing_url and code fields",
+      "checks": [
+        "HTTPS URL",
+        "No credentials in the URL",
+        "Configuration is saved only after a successful response"
+      ],
+      "request": {
+        "method": "POST",
+        "content_type": "application/json",
+        "body_fields": [
+          "code"
+        ]
+      },
+      "response_fields": [
+        "token",
+        "endpoint",
+        "schema_version",
+        "shortcut_version",
+        "currency",
+        "retry_policy"
+      ],
+      "proposed_storage": "Shortcuts/SpendTrace-config-v1.txt containing JSON; configuration loaded as the first action, outside distributable template",
+      "storage_status": "Native save/load and failed-pair preservation tested on Mac with synthetic fixtures; physical iPhone validation pending",
+      "fallback": "One import question accepts the complete app-generated device configuration instead of file-based pairing"
+    },
+    "test_connection": {
+      "merchant": "SpendTrace connectivity test",
+      "amount_decimal": "0",
+      "currency": null,
+      "test": true,
+      "expected_response": {
+        "accepted": true,
+        "status": "test_received"
+      },
+      "does_not_verify_card_routing": true
+    },
+    "background_capture": {
+      "setup_prompts": false,
+      "property_names": "Confirmed from user iPhone screenshots; six selections must be made once in the iPhone-authoring artifact because this Mac lacks these content types.",
+      "identifier": {
+        "wallet_alias": {
+          "label": "Transaction \u2192 Card or Pass \u2192 Name",
+          "last_four": "Omitted: not exposed by inspected input",
+          "network": "Omitted: not exposed by inspected input"
+        }
+      },
+      "merchant": "Actual provided merchant; stop with a useful failure if unavailable",
+      "amount_decimal": "Exact plain signed decimal string. Never use a binary floating-point intermediate, currency formatter, or fixed-decimal rounding. Reject ambiguous locale strings.",
+      "currency": "Supported ISO code only when actually supplied; otherwise JSON null, not the text null",
+      "event_id": "One UUID generated once before the POST; never regenerate when retrying the same event",
+      "observed_at": "Current observation time in yyyy-MM-dd'T'HH:mm:ssXXX format",
+      "transaction_at": "Omit unless a separate actual transaction timestamp is supplied",
+      "request": {
+        "method": "POST",
+        "authorization": "Bearer credential from private configuration",
+        "content_type": "application/json",
+        "test": false
+      },
+      "accepted_statuses": [
+        "pending",
+        "matched",
+        "unmatched",
+        "needs_review",
+        "needs_account",
+        "failed",
+        "separate"
+      ],
+      "needs_account_message": "Observation saved. Choose its payment account in SpendTrace; it is not yet an expense.",
+      "failure_behavior": "Native HTTP/network failures stop execution; validation failures return actionable text. Accepted is checked before success. Capture remains guarded in the iPhone-authoring artifact until publisher selects all six properties.",
+      "offline_queue": false,
+      "automatic_retries": false
+    }
+  },
+  "publisher_steps": [
+    "Author the native shortcut in Apple's editor using real target-iOS Wallet input; this specification is not a shortcut file",
+    "Validate setup, noninteractive capture, exact decimals, null currency, UUID uniqueness, and manual test exclusion",
+    "Remove all personal configuration before export or iCloud sharing",
+    "Export using File > Export > Anyone, or sign a genuine exported file with shortcuts sign --mode anyone",
+    "In the shortcut editor choose Share > Copy iCloud Link > Share",
+    "Validate a clean install from that link on a physical iPhone",
+    "Configure WALLET_SHORTCUT_URL, a numeric release version, and WALLET_SHORTCUT_VERIFIED=true only after those checks"
+  ],
+  "verified_iphone_selectors": {
+    "Transaction": [
+      "Card or Pass",
+      "Merchant",
+      "Amount",
+      "Name"
+    ],
+    "Payment Method": [
+      "Name"
+    ],
+    "Currency Amount": [
+      "Currency Code",
+      "Currency Amount",
+      "Name"
+    ]
+  }
+}

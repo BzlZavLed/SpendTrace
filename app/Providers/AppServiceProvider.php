@@ -5,6 +5,9 @@ namespace App\Providers;
 use App\Services\FakeReceiptExtractor;
 use App\Services\OpenAiReceiptExtractor;
 use App\Services\ReceiptExtractor;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -17,5 +20,8 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    public function boot(): void {}
+    public function boot(): void
+    {
+        RateLimiter::for('wallet-pair-exchange', fn (Request $request) => Limit::perMinute(10)->by('wallet-pair:'.$request->ip()));
+    }
 }

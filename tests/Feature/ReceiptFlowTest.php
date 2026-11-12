@@ -19,8 +19,10 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -369,5 +371,139 @@ class ReceiptFlowTest extends TestCase
         $this->assertSame(1234, $transaction->total_minor);
         $this->assertSame(1200, $transaction->items->sole()->amount_minor);
         $this->assertSame('User corrected item', $transaction->items->sole()->description);
+    }
+
+    public function test_provider_failure_logs_diagnostics_without_secrets_or_response_content(): void
+    {
+        config(['spendtrace.openai_key' => 'sk-secret-never-log']);
+        $transaction = Transaction::factory()->create();
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response([
+            'error' => ['code' => 'insufficient_quota', 'message' => 'Private receipt merchant and card 1234 sk-secret-never-log'],
+        ], 429, ['x-request-id' => 'req_test123'])]);
+        Log::spy();
+        $this->app->instance(ReceiptExtractor::class, new OpenAiReceiptExtractor);
+        app()->call([new ExtractReceipt($transaction->receipt_id, 1), 'handle']);
+        Log::shouldHaveReceived('error')->once()->with('Receipt extraction failed', \Mockery::on(function ($context) use ($transaction) {
+            $this->assertSame($transaction->receipt_id, $context['receipt_id']);
+            $this->assertSame('provider_request', $context['stage']);
+            $this->assertSame(429, $context['http_status']);
+            $this->assertSame('req_test123', $context['request_id']);
+            $this->assertSame('insufficient_quota', $context['provider_error_code']);
+            $this->assertStringNotContainsString('sk-secret-never-log', json_encode($context));
+            $this->assertStringNotContainsString('Private receipt', json_encode($context));
+
+            return true;
+        }));
+        $this->assertSame('failed', $transaction->receipt->fresh()->status);
+    }
+
+    public function test_validation_failure_logs_field_names_without_extracted_values(): void
+    {
+        Log::spy();
+        $transaction = Transaction::factory()->create();
+        $this->extract($transaction, $this->extractionOutput(['currency' => 'PRIVATE-RECEIPT-VALUE']));
+        Log::shouldHaveReceived('error')->once()->with('Receipt extraction failed', \Mockery::on(function ($context) {
+            $this->assertSame('validate_output', $context['stage']);
+            $this->assertContains('currency', $context['invalid_fields']);
+            $this->assertStringNotContainsString('PRIVATE-RECEIPT-VALUE', json_encode($context));
+
+            return true;
+        }));
+    }
+
+    public function test_optical_abbreviations_are_saved_as_items_with_nullable_quantities(): void
+    {
+        $transaction = Transaction::factory()->create();
+        $this->extract($transaction, $this->extractionOutput([
+            'merchant' => 'Costco Wholesale', 'category' => 'Health', 'printed_item_count' => 2,
+            'subtotal_minor' => 22198, 'total_minor' => 22198, 'tax_minor' => 0, 'discount_minor' => 0,
+            'items' => [
+                ['description' => '1879786 SV1.67 GST B', 'quantity' => null, 'amount_minor' => 15699, 'category' => 'Health'],
+                ['description' => '2059979 KS 326.72.0', 'quantity' => null, 'amount_minor' => 6499, 'category' => 'Health'],
+            ],
+        ]));
+        $transaction->refresh();
+        $this->assertSame('Health', $transaction->category);
+        $this->assertSame(22198, $transaction->total_minor);
+        $this->assertSame([15699, 6499], $transaction->items->pluck('amount_minor')->all());
+        $this->assertSame([null, null], $transaction->items->pluck('quantity')->all());
+        $this->assertSame('1879786 SV1.67 GST B', $transaction->items->first()->description);
+        $this->assertSame('receipt-v3', $transaction->receipt->runs->sole()->version);
+        $this->assertSame('unreconciled', $transaction->reconciliation_status);
+    }
+
+    public function test_missing_sale_lines_are_flagged_without_inventing_products(): void
+    {
+        $transaction = Transaction::factory()->create();
+        $this->extract($transaction, $this->extractionOutput(['printed_item_count' => 2, 'items' => []]));
+        $transaction->refresh();
+        $this->assertCount(0, $transaction->items);
+        $this->assertContains('No item lines were extracted. Compare the item section with the original receipt.', $transaction->review_reasons);
+        $this->assertContains('Receipt reports 2 items sold, but only 0 item lines were extracted. Check for missing lines; the printed count may include multiple units per line.', $transaction->review_reasons);
+        $this->assertSame('needs_review', $transaction->review_status);
+    }
+
+    public function test_extraction_accepts_printed_minute_precision_without_losing_items(): void
+    {
+        $transaction = Transaction::factory()->create();
+        $this->extract($transaction, $this->extractionOutput(['purchase_time' => '14:36']));
+        $transaction->refresh();
+        $this->assertSame('ready', $transaction->receipt->status);
+        $this->assertSame('14:36:00', $transaction->purchase_time);
+        $this->assertCount(1, $transaction->items);
+        $validator = new ExtractionValidator;
+        $this->expectException(ValidationException::class);
+        $validator->validate($this->extractionOutput(['purchase_time' => '25:36']));
+    }
+
+    public function test_landscape_receipt_sends_an_alternate_reading_view_without_changing_original(): void
+    {
+        Storage::fake('local');
+        config(['spendtrace.openai_key' => 'test-key']);
+        $transaction = Transaction::factory()->create();
+        $image = ReceiptImage::factory()->create(['receipt_id' => $transaction->receipt_id, 'user_id' => $transaction->user_id]);
+        $file = UploadedFile::fake()->image('sideways.jpg', 120, 80);
+        $original = file_get_contents($file->getPathname());
+        Storage::disk('local')->put($image->path, $original);
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response(['status' => 'completed', 'output' => [['content' => [['type' => 'output_text', 'text' => json_encode($this->extractionOutput())]]]]])]);
+        (new OpenAiReceiptExtractor)->extract($transaction->receipt);
+        Http::assertSent(function ($request) use ($original) {
+            $images = array_values(array_filter($request['input'][0]['content'], fn ($part) => $part['type'] === 'input_image'));
+            $this->assertCount(2, $images);
+            $this->assertSame($original, base64_decode(explode(',', $images[0]['image_url'], 2)[1]));
+            $size = getimagesizefromstring(base64_decode(explode(',', $images[1]['image_url'], 2)[1]));
+            $this->assertSame(80, $size[0]);
+            $this->assertSame(120, $size[1]);
+
+            return true;
+        });
+        $this->assertSame($original, Storage::disk('local')->get($image->path));
+    }
+
+    public function test_receipt_page_returns_formatted_line_amounts_when_currency_is_known(): void
+    {
+        $transaction = Transaction::factory()->create(['currency' => 'USD', 'total_minor' => 22198]);
+        $transaction->items()->createMany([
+            ['description' => 'Optical item one', 'amount_minor' => 15699],
+            ['description' => 'Optical item two', 'amount_minor' => 6499],
+        ]);
+        $this->actingAs(User::find($transaction->user_id))->get('/transactions/'.$transaction->id)
+            ->assertInertia(fn (Assert $page) => $page->component('Transaction')
+                ->where('transaction.amount', '221.98')
+                ->where('transaction.items.0.amount', '156.99')
+                ->where('transaction.items.1.amount', '64.99'));
+    }
+
+    public function test_unknown_currency_does_not_erase_extracted_amounts_when_form_is_saved(): void
+    {
+        $transaction = Transaction::factory()->create(['currency' => null, 'total_minor' => 22198]);
+        $transaction->items()->create(['description' => 'Optical item', 'amount_minor' => 15699]);
+        $this->actingAs(User::find($transaction->user_id))->get('/transactions/'.$transaction->id)
+            ->assertInertia(fn (Assert $page) => $page->where('transaction.currency', null)
+                ->where('transaction.total_minor', 22198)->where('transaction.items.0.amount_minor', 15699));
+        $this->patch('/transactions/'.$transaction->id, $this->payload($transaction))
+            ->assertSessionHasErrors('currency');
+        $this->assertSame(22198, $transaction->fresh()->total_minor);
+        $this->assertSame(15699, $transaction->fresh()->items->sole()->amount_minor);
     }
 }

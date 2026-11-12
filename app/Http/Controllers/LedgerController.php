@@ -12,7 +12,7 @@ class LedgerController extends Controller
 {
     public function __invoke(Request $request, LedgerService $ledger): Response
     {
-        $query = Transaction::where('user_id', $request->user()->id)->with(['receipt', 'account', 'items']);
+        $query = Transaction::whereNull('merged_into_id')->where('user_id', $request->user()->id)->with(['receipt', 'account', 'items']);
 
         return Inertia::render('Ledger', [
             'summary' => $ledger->summary($request->user()),

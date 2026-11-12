@@ -11,5 +11,7 @@ class TransactionObservation extends Model
 
     protected $guarded = ['id'];
 
+    protected $dateFormat = 'Y-m-d H:i:sP';
+
     protected $casts = ['payload' => 'array', 'observed_at' => 'immutable_datetime'];
 }

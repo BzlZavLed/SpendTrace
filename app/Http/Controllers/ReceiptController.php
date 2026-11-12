@@ -50,7 +50,7 @@ class ReceiptController extends Controller
                     }
                     throw ValidationException::withMessages(['images' => 'One or more photos already belong to a saved receipt. Open the existing receipt, or select only new photos.']);
                 }
-                $receipt = Receipt::create(['user_id' => $request->user()->id, 'provider' => config('spendtrace.provider')]);
+                $receipt = Receipt::create(['user_id' => $request->user()->id, 'provider' => config('spendtrace.provider'), 'extraction_version' => config('spendtrace.extraction_version')]);
                 foreach ($files as $i => $file) {
                     $path = $file->store('receipts/'.$request->user()->id.'/'.$receipt->id, 'local');
                     if (! $path) {
@@ -79,7 +79,7 @@ class ReceiptController extends Controller
         abort_unless($receipt->user_id === $request->user()->id, 404);
         DB::transaction(function () use ($receipt): void {
             $locked = Receipt::whereKey($receipt->id)->lockForUpdate()->firstOrFail();
-            $locked->update(['generation' => $locked->generation + 1, 'status' => 'queued', 'error' => null, 'provider' => config('spendtrace.provider')]);
+            $locked->update(['generation' => $locked->generation + 1, 'status' => 'queued', 'error' => null, 'provider' => config('spendtrace.provider'), 'extraction_version' => config('spendtrace.extraction_version')]);
         });
         $this->dispatch($receipt->fresh());
 
