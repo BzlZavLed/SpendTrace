@@ -26,6 +26,7 @@ class WalletAliasesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['spendtrace.legacy_wallet_server_enabled' => true]);
         $this->withoutVite();
     }
 

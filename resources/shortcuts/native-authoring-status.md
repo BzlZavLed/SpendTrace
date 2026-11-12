@@ -1,5 +1,38 @@
 # Native shortcut checkpoint — November 12, 2026
 
+## Architecture change: native local capture
+
+Wallet is now mobile-only. The native Xcode project is `native/SpendTrace/SpendTrace.xcodeproj`. It exposes a local **Record purchase** App Intent and stores data in the app's SwiftData database without CloudKit. Browser Wallet controls/prompts were removed; the former server routes default to HTTP 410 (`WALLET_SERVER_ENABLED=false`). Existing server data is retained. The server-based shortcut previews and pairing instructions below are historical, not the current installation flow. Do not publish them as the native local-capture release.
+
+The first native build includes ledger, manual entry, accounts, confirmed card links, and the App Intent. Receipt capture/OCR, receipt matching, export, optional server sync, and a finished native-action automation template remain future work. Physical Wallet execution and locked-device behavior are not yet verified.
+
+## Mobile installation and same-iPhone connection — 2026-11-12
+
+The web app now has a standalone manifest, PNG home-screen icons, iOS installation guidance, a browser install prompt when supported, mobile bottom navigation, and a public offline page. The service worker caches only that offline page and app icons. It does not cache private pages, receipt images, API responses, or queue offline writes.
+
+The regular Wallet setup no longer asks users to copy JSON. After a validated shortcut release is installed, **Connect Shortcut** calls the authenticated `POST /integrations/wallet/{connection}/connect` endpoint. That endpoint requires HTTPS and ownership, rejects ownership overrides, and returns a `shortcuts://run-shortcut` link with text input containing `action: spendtrace-connect-v1`, the pairing URL, and an expiring single-use code. It never includes the durable ingestion token. The shortcut exchanges the code in a POST body and saves configuration through the existing native Save File path. The original ownership/isolation and ingestion contracts are preserved.
+
+### Genuine mobile preview
+
+- Artifact: `resources/shortcuts/SpendTrace-Capture-Purchase-Mobile-Preview.shortcut`
+- Native editor name: **SpendTrace Mobile Ready Preview** (rename to **SpendTrace — Capture Purchase** only as part of final publisher preparation; the app launches that final name).
+- SHA-256: `126c57cf784205bf656c33738c5d43388a1957375769a9239abe09a3d85853ed`
+- Exported through Apple's editor and signed with `shortcuts sign --mode anyone` (exit 0).
+- Source action representation: `capture-purchase.mobile-authoring-actions.plist`; not an installable file.
+- No personal credentials are embedded. The native runtime reads/writes the user's private configuration file.
+- Mac tests confirmed setup recognition despite Apple reordering JSON keys, HTTP-address rejection, and malformed-code rejection before submission. They do not establish a successful live connection.
+
+### Remaining publisher work
+
+The mobile preview still deliberately stops Wallet capture at **Publisher setup required**. Apply the same six iPhone-only variable selections in the instructions below, then remove only that guard. Its manual menu now says **Connect to SpendTrace** (instructions to use the app) and **Test connection**; no manual JSON setup is needed in this preview. The earlier preview artifacts and their manual-pairing instructions remain historical development references.
+
+Install the mobile preview on the iPhone by AirDrop or Files, edit the six properties, rename it to the final name, and export the unconfigured template back for signing. A clean physical-iPhone install, actual same-phone URL launch, successful HTTPS exchange and configuration persistence, two real-card purchases, locked-device/reboot behavior, and receipt matching still need validation. The current VS Code tunnel was previously rejected as HTTP by Laravel; this change does not bypass that protection or fix the tunnel.
+
+Only after those checks publish the genuine iCloud URL and set `WALLET_SHORTCUT_VERIFIED=true`, a numeric version, and `WALLET_SHORTCUT_HANDOFF_VERIFIED=true`. Install and Connect remain gated. Use a stable HTTPS deployment origin for the final home-screen app and shortcut configuration.
+
+Validation: production frontend build and TypeScript passed; 86 Wallet/mobile tests passed, two PostgreSQL-only tests skipped; four service-worker tests passed. The running local server returns the correct manifest, JavaScript, and PNG content types. Physical iOS/Android installation has not been tested here.
+
+
 **Mapping is implemented. The native shortcut core is tested on Mac. Full Wallet capture is not yet release-validated.** Six one-time iPhone-only property selections, deployment, and physical-device checks remain. Install remains disabled; no iCloud release URL is claimed.
 
 ## Genuine signed artifacts

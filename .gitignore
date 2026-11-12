@@ -25,3 +25,8 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Native Xcode local build/user state
+/native/**/xcuserdata/
+/native/**/DerivedData/
+/native/**/*.xcuserstate

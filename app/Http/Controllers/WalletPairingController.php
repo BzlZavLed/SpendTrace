@@ -34,6 +34,23 @@ class WalletPairingController extends Controller
             'pairing_url' => $origin.'/api/v1/integrations/wallet/pair'])->header('Cache-Control', 'private, no-store');
     }
 
+    public function connect(Request $request, WalletConnection $connection, WalletShortcutRelease $release): JsonResponse
+    {
+        abort_unless($connection->user_id === $request->user()->id, 404);
+        abort_unless($request->isSecure(), 426, 'Open SpendTrace over HTTPS to connect your iPhone.');
+        $request->validate(['user_id' => 'missing', 'account_id' => 'missing', 'connection_id' => 'missing']);
+        abort_unless($release->present()['connect_available'], 409, 'The shortcut update is not ready for installation yet.');
+        $request->merge(['device_name' => 'My iPhone']);
+        $setup = $this->store($request, $connection, $release)->getData(true);
+        $input = json_encode(['action' => 'spendtrace-connect-v1', 'pairing_url' => $setup['pairing_url'], 'code' => $setup['code']], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $url = 'shortcuts://run-shortcut?'.http_build_query([
+            'name' => 'SpendTrace — Capture Purchase', 'input' => 'text', 'text' => $input,
+        ], '', '&', PHP_QUERY_RFC3986);
+
+        return response()->json(['launch_url' => $url, 'expires_at' => $setup['expires_at']])
+            ->header('Cache-Control', 'private, no-store')->header('Referrer-Policy', 'no-referrer');
+    }
+
     public function exchange(Request $request, WalletShortcutRelease $release): JsonResponse
     {
         abort_unless($request->isSecure(), 426, 'HTTPS is required for pairing.');

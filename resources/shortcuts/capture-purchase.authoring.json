@@ -2,7 +2,7 @@
   "kind": "authoring-specification-not-an-installable-shortcut",
   "name": "SpendTrace \u2014 Capture Purchase",
   "version": "0.1.0-unreleased",
-  "release_status": "signed-previews-created-mac-core-tested-awaiting-iphone-property-selection-and-live-https-validation",
+  "release_status": "signed-mobile-preview-created-awaiting-iphone-wallet-selectors-and-live-handoff-validation",
   "credentials": null,
   "endpoint": null,
   "card_mappings": null,
@@ -15,9 +15,8 @@
   "entry_paths": {
     "manual_without_wallet_input": {
       "menu": [
-        "Pair device",
-        "Test connection",
-        "Replace configuration"
+        "Connect to SpendTrace",
+        "Test connection"
       ],
       "never_create_expense": true
     },
@@ -45,7 +44,8 @@
       ],
       "proposed_storage": "Shortcuts/SpendTrace-config-v1.txt containing JSON; configuration loaded as the first action, outside distributable template",
       "storage_status": "Native save/load and failed-pair preservation tested on Mac with synthetic fixtures; physical iPhone validation pending",
-      "fallback": "One import question accepts the complete app-generated device configuration instead of file-based pairing"
+      "fallback": "One import question accepts the complete app-generated device configuration instead of file-based pairing",
+      "status": "Historical manual-copy path in older previews; replaced by same_iphone_connect in the mobile preview."
     },
     "test_connection": {
       "merchant": "SpendTrace connectivity test",
@@ -93,6 +93,23 @@
       "failure_behavior": "Native HTTP/network failures stop execution; validation failures return actionable text. Accepted is checked before success. Capture remains guarded in the iPhone-authoring artifact until publisher selects all six properties.",
       "offline_queue": false,
       "automatic_retries": false
+    },
+    "same_iphone_connect": {
+      "input": {
+        "action": "spendtrace-connect-v1",
+        "pairing_url": "Server-generated HTTPS pairing endpoint",
+        "code": "Server-generated expiring single-use code"
+      },
+      "launch": "shortcuts://run-shortcut?name=SpendTrace%20%E2%80%94%20Capture%20Purchase&input=text&text=<URL-encoded JSON>",
+      "recognition": "Do not assume JSON key order; Shortcuts reorders keys when converting input to text.",
+      "credentials_in_launch_url": false,
+      "single_use_code_in_launch_url": true,
+      "mac_checks": [
+        "setup recognition after native JSON conversion",
+        "HTTP endpoint rejected",
+        "invalid code rejected"
+      ],
+      "live_https_and_physical_iphone_verified": false
     }
   },
   "publisher_steps": [

@@ -19,6 +19,7 @@ class WalletPairingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['spendtrace.legacy_wallet_server_enabled' => true]);
         $this->withoutVite();
         config(['spendtrace.wallet_public_url' => 'https://spendtrace.example', 'spendtrace.wallet_shortcut_url' => null, 'spendtrace.wallet_shortcut_verified' => false]);
     }

@@ -22,6 +22,7 @@ class WalletConcurrencyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['spendtrace.legacy_wallet_server_enabled' => true]);
         if (DB::getDriverName() !== 'pgsql' || ! str_ends_with(DB::connection()->getDatabaseName(), '_test')) {
             $this->markTestSkipped('Concurrency checks require a disposable PostgreSQL database ending in _test.');
         }

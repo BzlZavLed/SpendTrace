@@ -6,3 +6,7 @@ createInertiaApp({
  resolve: name => { const pages = import.meta.glob<DefineComponent>('./Pages/*.vue', { eager: true, import: 'default' }); return pages[`./Pages/${name}.vue`]; },
  setup({ el, App, props, plugin }) { createApp({ render: () => h(App, props) }).use(plugin).mount(el); },
 });
+
+if (import.meta.env.PROD && 'serviceWorker' in navigator && window.isSecureContext) {
+ window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js', {updateViaCache:'none'}).catch(() => { /* The web app remains usable if registration is unavailable. */ }); });
+}

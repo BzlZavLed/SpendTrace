@@ -9,6 +9,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WalletAliasController;
 use App\Http\Controllers\WalletConnectionController;
 use App\Http\Controllers\WalletPairingController;
+use App\Http\Middleware\RequireLegacyWalletServer;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -18,24 +19,28 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
 });
 Route::middleware('auth')->group(function (): void {
-    Route::post('/integrations/wallet/{connection}/pairings', [WalletPairingController::class, 'store'])->middleware('throttle:10,1');
-    Route::post('/integrations/wallet/{connection}/device-config', [WalletPairingController::class, 'importConfiguration'])->middleware('throttle:10,1');
-    Route::delete('/integrations/wallet/{connection}/devices/{device}', [WalletPairingController::class, 'revoke']);
-    Route::post('/wallet-aliases/{event}/resolve', [WalletAliasController::class, 'resolve']);
-    Route::post('/integrations/wallet/{connection}/aliases', [WalletAliasController::class, 'store']);
-    Route::delete('/integrations/wallet/{connection}/aliases/{alias}', [WalletAliasController::class, 'destroy']);
+    Route::middleware(RequireLegacyWalletServer::class)->group(function (): void {
+        Route::post('/integrations/wallet/{connection}/connect', [WalletPairingController::class, 'connect'])->middleware('throttle:10,1')->name('wallet.connect');
+        Route::post('/integrations/wallet/{connection}/pairings', [WalletPairingController::class, 'store'])->middleware('throttle:10,1');
+        Route::post('/integrations/wallet/{connection}/device-config', [WalletPairingController::class, 'importConfiguration'])->middleware('throttle:10,1');
+        Route::delete('/integrations/wallet/{connection}/devices/{device}', [WalletPairingController::class, 'revoke']);
+        Route::post('/wallet-aliases/{event}/resolve', [WalletAliasController::class, 'resolve']);
+        Route::post('/integrations/wallet/{connection}/aliases', [WalletAliasController::class, 'store']);
+        Route::delete('/integrations/wallet/{connection}/aliases/{alias}', [WalletAliasController::class, 'destroy']);
 
-    Route::get('/integrations/wallet', [WalletConnectionController::class, 'index'])->name('wallet.index');
-    Route::post('/integrations/wallet', [WalletConnectionController::class, 'store']);
-    Route::patch('/integrations/wallet/{connection}', [WalletConnectionController::class, 'update']);
-    Route::delete('/integrations/wallet/{connection}', [WalletConnectionController::class, 'destroy']);
-    Route::post('/integrations/wallet/{connection}/token', [WalletConnectionController::class, 'token'])->middleware('throttle:10,1');
-    Route::delete('/integrations/wallet/{connection}/token', [WalletConnectionController::class, 'revoke']);
-    Route::get('/integrations/wallet/{connection}/status', [WalletConnectionController::class, 'status']);
-    Route::get('/wallet-matches', [PurchaseMatchController::class, 'index'])->name('wallet.matches');
-    Route::post('/wallet-matches/{event}/attach', [PurchaseMatchController::class, 'attach']);
-    Route::post('/wallet-matches/{event}/separate', [PurchaseMatchController::class, 'separate']);
-    Route::post('/wallet-matches/{event}/retry', [PurchaseMatchController::class, 'retry'])->middleware('throttle:10,1');
+        Route::get('/integrations/wallet', [WalletConnectionController::class, 'index'])->name('wallet.index');
+        Route::post('/integrations/wallet', [WalletConnectionController::class, 'store']);
+        Route::patch('/integrations/wallet/{connection}', [WalletConnectionController::class, 'update']);
+        Route::delete('/integrations/wallet/{connection}', [WalletConnectionController::class, 'destroy']);
+        Route::post('/integrations/wallet/{connection}/token', [WalletConnectionController::class, 'token'])->middleware('throttle:10,1');
+        Route::delete('/integrations/wallet/{connection}/token', [WalletConnectionController::class, 'revoke']);
+        Route::get('/integrations/wallet/{connection}/status', [WalletConnectionController::class, 'status']);
+        Route::get('/wallet-matches', [PurchaseMatchController::class, 'index'])->name('wallet.matches');
+        Route::post('/wallet-matches/{event}/attach', [PurchaseMatchController::class, 'attach']);
+        Route::post('/wallet-matches/{event}/separate', [PurchaseMatchController::class, 'separate']);
+        Route::post('/wallet-matches/{event}/retry', [PurchaseMatchController::class, 'retry'])->middleware('throttle:10,1');
+
+    });
 
     Route::get('/', LedgerController::class)->name('ledger');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

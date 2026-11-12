@@ -24,7 +24,7 @@ class WalletShortcutRelease
             && preg_match('/^\d+\.\d+\.\d+$/D', (string) config('spendtrace.wallet_shortcut_version'));
 
         return ['name' => 'SpendTrace — Capture Purchase', 'version' => config('spendtrace.wallet_shortcut_version'),
-            'available' => (bool) $valid, 'url' => $valid ? $url : null, 'pairing_available' => $this->origin() !== null,
+            'available' => (bool) $valid, 'connect_available' => (bool) ($valid && config('spendtrace.wallet_shortcut_handoff_verified') && $this->origin() !== null), 'url' => $valid ? $url : null, 'pairing_available' => $this->origin() !== null,
             'reason' => $valid ? null : 'No validated shortcut release is published yet. Installation is unavailable; pairing and ingestion services are ready for release validation.'];
     }
 }

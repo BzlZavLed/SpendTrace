@@ -13,7 +13,9 @@ class PrivateResponse
         $response = $next($request);
         $response->headers->set('Cache-Control', 'private, no-store');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('Referrer-Policy', 'same-origin');
+        if (! $response->headers->has('Referrer-Policy')) {
+            $response->headers->set('Referrer-Policy', 'same-origin');
+        }
 
         return $response;
     }

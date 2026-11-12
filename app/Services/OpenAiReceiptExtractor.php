@@ -10,16 +10,23 @@ class OpenAiReceiptExtractor implements ReceiptExtractor
 {
     public function extract(Receipt $receipt): array
     {
+        return $this->extractImages($receipt->images->map(fn ($image): array => [
+            'bytes' => Storage::disk('local')->get($image->path), 'mime' => $image->mime,
+        ])->all());
+    }
+
+    /** @param array<int, array{bytes: string, mime: string}> $images */
+    public function extractImages(array $images): array
+    {
         if (! config('spendtrace.openai_key')) {
-            throw new ReceiptExtractionException('OPENAI_API_KEY is missing. Configure it and restart the queue worker.', ['reason' => 'missing_api_key']);
+            throw new ReceiptExtractionException('OpenAI processing is not configured.', ['reason' => 'missing_api_key']);
         }
         $content = [['type' => 'input_text', 'text' => 'Extract this one receipt from all attached images.']];
-        foreach ($receipt->images as $image) {
-            $bytes = Storage::disk('local')->get($image->path);
-            $content[] = ['type' => 'input_image', 'image_url' => 'data:'.$image->mime.';base64,'.base64_encode($bytes), 'detail' => 'high'];
-            $rotated = $this->rotatedReadingView($bytes);
+        foreach ($images as $image) {
+            $content[] = ['type' => 'input_image', 'image_url' => 'data:'.$image['mime'].';base64,'.base64_encode($image['bytes']), 'detail' => 'high'];
+            $rotated = $this->rotatedReadingView($image['bytes']);
             if ($rotated !== null) {
-                $content[] = ['type' => 'input_text', 'text' => 'The next image is the same preceding photo rotated clockwise for easier reading. It is NOT an additional receipt or additional items. Use whichever view makes the text legible.'];
+                $content[] = ['type' => 'input_text', 'text' => 'The next image is the same preceding photo rotated clockwise for easier reading. It is NOT an additional receipt or additional items.'];
                 $content[] = ['type' => 'input_image', 'image_url' => 'data:image/jpeg;base64,'.base64_encode($rotated), 'detail' => 'high'];
             }
         }

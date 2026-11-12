@@ -1,7 +1,10 @@
 <?php
 
 return [
+    'ai_preview_enabled' => env('AI_PREVIEW_ENABLED', false),
+    'legacy_wallet_server_enabled' => env('WALLET_SERVER_ENABLED', false),
     'wallet_shortcut_url' => env('WALLET_SHORTCUT_URL'),
+    'wallet_shortcut_handoff_verified' => env('WALLET_SHORTCUT_HANDOFF_VERIFIED', false),
     'wallet_shortcut_version' => env('WALLET_SHORTCUT_VERSION', '0.1.0-unreleased'),
     'wallet_shortcut_verified' => env('WALLET_SHORTCUT_VERIFIED', false),
     'wallet_public_url' => env('WALLET_PUBLIC_URL'),
